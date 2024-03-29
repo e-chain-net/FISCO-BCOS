@@ -317,6 +317,7 @@ std::pair<std::string, protocol::BlockNumber> SystemConfigPrecompiled::getSysCon
             blockContext.blockVersion() >= BlockVersion::V3_3_VERSION) [[unlikely]]
         {
             return {blockContext.isAuthCheck() ? "1" : "0", 0};
+            // return {"0", 0};
         }
 
         PRECOMPILED_LOG(DEBUG) << LOG_BADGE("SystemConfigPrecompiled")

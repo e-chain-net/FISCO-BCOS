@@ -281,6 +281,7 @@ void LedgerConfigFetcher::fetchAuthCheckStatus()
     try
     {
         auto ret = fetchSystemConfig(SYSTEM_KEY_AUTH_CHECK_STATUS);
+        // uint32_t ret = 0;
         TOOL_LOG(INFO) << LOG_DESC("fetchAuthCheckStatus success") << LOG_KV("value", ret);
         m_ledgerConfig->setAuthCheckStatus(boost::lexical_cast<uint32_t>(ret));
     }
