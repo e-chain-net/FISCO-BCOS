@@ -858,9 +858,9 @@ auto KeyPageStorage::setEntryToPage(std::string table, std::string key, Entry en
 
     // if new entry is too big, it will trigger split
     auto* page = pageData->getPage();
-    page->setTableMeta(meta);
-    // NOTE: add this condition to adapt the old data without keyPage info
-    // rewrite to new data with keyPage.
+    // page->setTableMeta(meta);
+    //  NOTE: add this condition to adapt the old data without keyPage info
+    //  rewrite to new data with keyPage.
     if (page == nullptr && pageData->type == Data::NormalEntry &&
         pageData->entry.status() == Entry::DELETED)
     {
@@ -905,6 +905,7 @@ auto KeyPageStorage::setEntryToPage(std::string table, std::string key, Entry en
         {
             pageData->entry.setStatus(Entry::Status::MODIFIED);
         }
+        page->setTableMeta(meta);
         // page is modified, the meta maybe modified, mark meta as dirty
         data.value()->entry.setStatus(Entry::Status::MODIFIED);
     }
