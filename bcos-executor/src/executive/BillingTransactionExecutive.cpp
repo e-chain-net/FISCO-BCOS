@@ -14,7 +14,8 @@ CallParameters::UniquePtr BillingTransactionExecutive::start(CallParameters::Uni
     u256 gasPrice = input->gasPrice;
     auto message = TransactionExecutive::execute(std::move(input));
 
-    if ((currentSeq == 0) && !staticCall)
+    // if ((currentSeq == 0) && !staticCall)
+    if (false)
     {
         CallParameters::UniquePtr callParam4AccountPre =
             std::make_unique<CallParameters>(CallParameters::MESSAGE);

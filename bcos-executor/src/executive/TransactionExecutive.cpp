@@ -1569,117 +1569,126 @@ bool TransactionExecutive::buildBfsPath(std::string_view _absoluteDir, std::stri
 
 bool TransactionExecutive::checkAuth(const CallParameters::UniquePtr& callParameters)
 {
-    // check account first
-    if (m_blockContext.blockVersion() >= (uint32_t)bcos::protocol::BlockVersion::V3_1_VERSION)
-    {
-        uint8_t accountStatus = checkAccountAvailable(callParameters);
-        if (accountStatus == AccountStatus::freeze)
+    return true;
+    /*
+        // check account first
+        if (m_blockContext.blockVersion() >= (uint32_t)bcos::protocol::BlockVersion::V3_1_VERSION)
         {
-            writeErrInfoToOutput("Account is frozen.", *callParameters);
-            callParameters->status = (int32_t)TransactionStatus::AccountFrozen;
-            callParameters->type = CallParameters::REVERT;
-            callParameters->message = "Account's status is abnormal";
-            callParameters->create = false;
-            EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
-                                << LOG_KV("origin", callParameters->origin);
-            return false;
-        }
-        else if (accountStatus == AccountStatus::abolish)
-        {
-            writeErrInfoToOutput("Account is abolished.", *callParameters);
-            callParameters->status = (int32_t)TransactionStatus::AccountAbolished;
-            callParameters->type = CallParameters::REVERT;
-            callParameters->message = "Account's status is abnormal";
-            callParameters->create = false;
-            EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
-                                << LOG_KV("origin", callParameters->origin);
-            return false;
-        }
-    }
-    if (callParameters->create)
-    {
-        // if create contract, then
-        //      check exec auth
-        if (!checkExecAuth(callParameters))
-        {
-            auto newAddress = string(callParameters->codeAddress);
-            callParameters->status = (int32_t)TransactionStatus::PermissionDenied;
-            callParameters->type = CallParameters::REVERT;
-            callParameters->message = "Create permission denied";
-            callParameters->create = false;
-            if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_1_VERSION) >= 0)
+            uint8_t accountStatus = checkAccountAvailable(callParameters);
+            if (accountStatus == AccountStatus::freeze)
             {
-                writeErrInfoToOutput("Create permission denied.", *callParameters);
+                writeErrInfoToOutput("Account is frozen.", *callParameters);
+                callParameters->status = (int32_t)TransactionStatus::AccountFrozen;
+                callParameters->type = CallParameters::REVERT;
+                callParameters->message = "Account's status is abnormal";
+                callParameters->create = false;
+                EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
+                                    << LOG_KV("origin", callParameters->origin);
+                return false;
             }
-            EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
-                                << LOG_KV("newAddress", newAddress)
-                                << LOG_KV("origin", callParameters->origin);
-            return false;
+            else if (accountStatus == AccountStatus::abolish)
+            {
+                writeErrInfoToOutput("Account is abolished.", *callParameters);
+                callParameters->status = (int32_t)TransactionStatus::AccountAbolished;
+                callParameters->type = CallParameters::REVERT;
+                callParameters->message = "Account's status is abnormal";
+                callParameters->create = false;
+                EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
+                                    << LOG_KV("origin", callParameters->origin);
+                return false;
+            }
         }
-    }
-    else
-    {
-        // if internal call, then not check auth
-        if (callParameters->internalCall)
+        if (callParameters->create)
+        {
+        if(callParameters->internalCreate)
         {
             return true;
         }
-        auto tableName =
-            getContractTableName(callParameters->receiveAddress, m_blockContext.isWasm());
-        // if call contract, then
-        //      check contract available
-        //      check exec auth
-        auto contractStatus = checkContractAvailable(callParameters);
-        if (contractStatus != static_cast<uint8_t>(ContractStatus::Available))
-        {
-            callParameters->status = (int32_t)TransactionStatus::ContractFrozen;
-            callParameters->type = CallParameters::REVERT;
-            callParameters->message = "Contract is frozen";
-            if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_2_VERSION) >= 0)
+            // if create contract, then
+            //      check exec auth
+            if (!checkExecAuth(callParameters))
             {
-                if (contractStatus == static_cast<uint8_t>(ContractStatus::Abolish))
+                auto newAddress = string(callParameters->codeAddress);
+                callParameters->status = (int32_t)TransactionStatus::PermissionDenied;
+                callParameters->type = CallParameters::REVERT;
+                callParameters->message = "Create permission denied";
+                callParameters->create = false;
+                if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_1_VERSION) >=
+       0)
                 {
-                    callParameters->status = (int32_t)TransactionStatus::ContractAbolished;
-                    callParameters->message = "Contract is abolished";
-                    writeErrInfoToOutput("Contract is abolished.", *callParameters);
+                    writeErrInfoToOutput("Create permission denied.", *callParameters);
                 }
+                EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
+                                    << LOG_KV("newAddress", newAddress)
+                                    << LOG_KV("origin", callParameters->origin);
+                return false;
             }
-            else if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_1_VERSION) >=
-                     0)
-            {
-                writeErrInfoToOutput("Contract is frozen.", *callParameters);
-            }
-            else if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_0_VERSION) <=
-                     0)
-            {
-                callParameters->data.clear();
-            }
-            EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
-                                << LOG_KV("tableName", tableName)
-                                << LOG_KV("origin", callParameters->origin);
-            return false;
         }
-        if (!checkExecAuth(callParameters))
+        else
         {
-            callParameters->status = (int32_t)TransactionStatus::PermissionDenied;
-            callParameters->type = CallParameters::REVERT;
-            callParameters->message = "Call permission denied";
-            if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_1_VERSION) >= 0)
+            // if internal call, then not check auth
+            if (callParameters->internalCall)
             {
-                writeErrInfoToOutput("Call permission denied.", *callParameters);
+                return true;
             }
-            else if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_0_VERSION) <=
-                     0)
+            auto tableName =
+                getContractTableName(callParameters->receiveAddress, m_blockContext.isWasm());
+            // if call contract, then
+            //      check contract available
+            //      check exec auth
+            auto contractStatus = checkContractAvailable(callParameters);
+            if (contractStatus != static_cast<uint8_t>(ContractStatus::Available))
             {
-                callParameters->data.clear();
+                callParameters->status = (int32_t)TransactionStatus::ContractFrozen;
+                callParameters->type = CallParameters::REVERT;
+                callParameters->message = "Contract is frozen";
+                if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_2_VERSION) >=
+       0)
+                {
+                    if (contractStatus == static_cast<uint8_t>(ContractStatus::Abolish))
+                    {
+                        callParameters->status = (int32_t)TransactionStatus::ContractAbolished;
+                        callParameters->message = "Contract is abolished";
+                        writeErrInfoToOutput("Contract is abolished.", *callParameters);
+                    }
+                }
+                else if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_1_VERSION)
+       >= 0)
+                {
+                    writeErrInfoToOutput("Contract is frozen.", *callParameters);
+                }
+                else if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_0_VERSION)
+       <= 0)
+                {
+                    callParameters->data.clear();
+                }
+                EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
+                                    << LOG_KV("tableName", tableName)
+                                    << LOG_KV("origin", callParameters->origin);
+                return false;
             }
-            EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
-                                << LOG_KV("tableName", tableName)
-                                << LOG_KV("origin", callParameters->origin);
-            return false;
+            if (!checkExecAuth(callParameters))
+            {
+                callParameters->status = (int32_t)TransactionStatus::PermissionDenied;
+                callParameters->type = CallParameters::REVERT;
+                callParameters->message = "Call permission denied";
+                if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_1_VERSION) >=
+       0)
+                {
+                    writeErrInfoToOutput("Call permission denied.", *callParameters);
+                }
+                else if (versionCompareTo(m_blockContext.blockVersion(), BlockVersion::V3_0_VERSION)
+       <= 0)
+                {
+                    callParameters->data.clear();
+                }
+                EXECUTIVE_LOG(INFO) << "Revert transaction: " << callParameters->message
+                                    << LOG_KV("tableName", tableName)
+                                    << LOG_KV("origin", callParameters->origin);
+                return false;
+            }
         }
-    }
-    return true;
+        return true; */
 }
 
 bool TransactionExecutive::checkExecAuth(const CallParameters::UniquePtr& callParameters)
